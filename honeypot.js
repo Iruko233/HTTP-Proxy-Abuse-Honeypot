@@ -6,8 +6,8 @@ require('colors');
 
 const proxy = httpProxy.createProxyServer({});
 
-const TELEGRAM_BOT_TOKEN = 'Your_Bot_Token';
-const TELEGRAM_CHANNEL_ID = 'Your_Telegram_Channel_ID';
+const TELEGRAM_BOT_TOKEN = '6261456225:AAFwgJkxzZ3mXWWTqO09d_P35eF6YBsudjo';
+const TELEGRAM_CHANNEL_ID = '@WhoisDDoSWhatNow';
 
 const blacklistedIPs = new Set();
 const requestCountMap = new Map();
@@ -68,44 +68,44 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  if (requestCountMap.has(clientIP) && requestCountMap.get(clientIP).count >= 10) {
-    const blockMessage = `⚠*检测到潜在的滥用行为*⚠\n➖➖➖➖➖➖➖➖\n*滥用者IP:* \`${clientIP}\`\n*最后请求URL:* \`${requestCountMap.get(clientIP).lastURL}\`\n*最后请求标头:* \`\`\`${JSON.stringify(requestCountMap.get(clientIP).lastHeaders, null, 2)}\`\`\``;
-    const blockMessageRaw = `Blocked IP: ${clientIP} for 60 minutes\nLast URL: ${requestCountMap.get(clientIP).lastURL}\nLast Headers:\n ${JSON.stringify(requestCountMap.get(clientIP).lastHeaders, null, 2)}`;
-    console.log(separatorLine);
-    console.log(blockMessageRaw.red);
+  try {
+    if (requestCountMap.has(clientIP) && requestCountMap.get(clientIP).count >= 10) {
+      const blockMessage = `⚠*检测到潜在的滥用行为*⚠\n➖➖➖➖➖➖➖➖\n*滥用者IP:* \`${clientIP}\`\n*最后请求URL:* \`${requestCountMap.get(clientIP).lastURL}\`\n*最后请求标头:* \`\`\`${JSON.stringify(requestCountMap.get(clientIP).lastHeaders, null, 2)}\`\`\``;
+      const blockMessageRaw = `Blocked IP: ${clientIP} for 60 minutes\nLast URL: ${requestCountMap.get(clientIP).lastURL}\nLast Headers:\n ${JSON.stringify(requestCountMap.get(clientIP).lastHeaders, null, 2)}`;
+      console.log(separatorLine);
+      console.log(blockMessageRaw.red);
 
-    if (!blacklistedIPs.has(clientIP)) {
-      sendTelegramMessage(blockMessage);
-      blacklistedIPs.add(clientIP);
+      if (!blacklistedIPs.has(clientIP)) {
+        sendTelegramMessage(blockMessage);
+        blacklistedIPs.add(clientIP);
+      }
+
+      req.destroy();
+      //console.log(`Connection from blocked IP ${clientIP} is dropped due to excessive requests.`.red);
+      return;
     }
 
-    req.destroy();
-    //console.log(`Connection from blocked IP ${clientIP} is dropped due to excessive requests.`.red);
-    return;
-  }
+    if (!requestCountMap.has(clientIP)) {
+      requestCountMap.set(clientIP, { count: 1, lastURL: req.url, lastHeaders: req.headers });
+    } else {
+      requestCountMap.get(clientIP).count += 1;
+      requestCountMap.get(clientIP).lastURL = req.url;
+      requestCountMap.get(clientIP).lastHeaders = req.headers;
+    }
 
-  if (!requestCountMap.has(clientIP)) {
-    requestCountMap.set(clientIP, { count: 1, lastURL: req.url, lastHeaders: req.headers });
-  } else {
-    requestCountMap.get(clientIP).count += 1;
-    requestCountMap.get(clientIP).lastURL = req.url;
-    requestCountMap.get(clientIP).lastHeaders = req.headers;
-  }
+    const method = req.method;
+    const targetURL = req.url;
+    const httpVersion = req.httpVersion;
+    const userAgent = req.headers['user-agent'];
 
-  const method = req.method;
-  const targetURL = req.url;
-  const httpVersion = req.httpVersion;
-  const userAgent = req.headers['user-agent'];
+    console.log(separatorLine);
+    console.log('Received request from IP:'.green, clientIP.green);
+    console.log('HTTP Method:'.yellow, method.yellow);
+    console.log('Target URL:'.blue, targetURL.blue);
+    console.log('HTTP Version:'.magenta, `HTTP/${httpVersion}`.magenta);
+    console.log('User-Agent:'.cyan, userAgent.cyan);
+    console.log(`Request count for ${clientIP}:`.green, requestCountMap.get(clientIP).count.toString().green);
 
-  console.log(separatorLine);
-  console.log('Received request from IP:'.green, clientIP.green);
-  console.log('HTTP Method:'.yellow, method.yellow);
-  console.log('Target URL:'.blue, targetURL.blue);
-  console.log('HTTP Version:'.magenta, `HTTP/${httpVersion}`.magenta);
-  console.log('User-Agent:'.cyan, userAgent.cyan);
-  console.log(`Request count for ${clientIP}:`.green, requestCountMap.get(clientIP).count.toString().green);
-
-  try {
     const parsedUrl = url.parse(targetURL);
     proxy.web(req, res, { target: parsedUrl.href });
   } catch (error) {
